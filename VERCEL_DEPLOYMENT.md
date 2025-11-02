@@ -34,7 +34,10 @@ Add these environment variables in Vercel project settings:
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SITE_URL=https://your-project.vercel.app
 ```
+
+**Important:** Replace `your-project.vercel.app` with your actual Vercel deployment URL.
 
 **Where to find Supabase credentials:**
 - Go to your Supabase project dashboard
@@ -54,7 +57,23 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 2. Wait for the build to complete (usually 2-3 minutes)
 3. Your app will be live at `https://your-project.vercel.app`
 
-## Step 4: Post-Deployment Checklist
+## Step 4: Configure Supabase Email Redirects
+
+**CRITICAL:** After deployment, you must update Supabase redirect URLs:
+
+1. Go to your Supabase Dashboard → **Authentication** → **URL Configuration**
+2. Set **Site URL** to: `https://your-project.vercel.app`
+3. Add **Redirect URLs**:
+   ```
+   https://your-project.vercel.app/**
+   ```
+4. Click **Save**
+
+**Why?** Without this, email verification links will redirect to localhost instead of your deployed site.
+
+See [SUPABASE_EMAIL_CONFIG.md](./SUPABASE_EMAIL_CONFIG.md) for detailed instructions.
+
+## Step 5: Post-Deployment Checklist
 
 ### ✅ Verify Database Setup
 

@@ -95,7 +95,8 @@ export default function SettingsPage() {
       }
 
       // Generate invitation link
-      const baseUrl = window.location.origin;
+      // Use environment variable for production, fallback to window.location for development
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       const link = `${baseUrl}/signup?token=${token}`;
       setInvitationLink(link);
       setInvitationSent(true);
