@@ -27,11 +27,23 @@ export function useExpenses(filters?: ExpenseFilters) {
       setLoading(true);
       setError(null);
 
+      // Build query to fetch both user's expenses and partner's expenses (if partner exists)
       let query = supabase
         .from('expenses')
         .select('*')
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
+        .is('deleted_at', null);
+
+      // If partner exists, fetch expenses from both users
+      // Otherwise, just fetch current user's expenses
+      if (partner) {
+        // Fetch expenses where user_id matches either user1 or user2 of the partner relationship
+        query = query.or(`user_id.eq.${partner.user1_id},user_id.eq.${partner.user2_id}`);
+      } else {
+        // No partner - just fetch current user's expenses
+        query = query.eq('user_id', user.id);
+      }
+
+      query = query
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -87,12 +99,16 @@ export function useExpenses(filters?: ExpenseFilters) {
     try {
       setError(null);
 
+      // Set partner_id if expense is marked as shared and partner exists
+      const partnerId = expenseData.is_shared && partner ? partner.id : null;
+
       const { data, error: insertError } = await supabase
         .from('expenses')
         .insert({
           ...expenseData,
           user_id: user.id,
-          partner_id: partner?.id || null,
+          partner_id: partnerId,
+          is_shared: expenseData.is_shared || false,
         })
         .select()
         .single();
@@ -118,9 +134,18 @@ export function useExpenses(filters?: ExpenseFilters) {
     try {
       setError(null);
 
+      // Set partner_id if expense is marked as shared and partner exists
+      const partnerId = expenseData.is_shared && partner ? partner.id : null;
+
+      const updatePayload: any = {
+        ...expenseData,
+        partner_id: expenseData.is_shared ? partnerId : null,
+        is_shared: expenseData.is_shared || false,
+      };
+
       const { error: updateError } = await supabase
         .from('expenses')
-        .update(expenseData)
+        .update(updatePayload)
         .eq('id', id)
         .eq('user_id', user.id); // Ensure user owns the expense
 

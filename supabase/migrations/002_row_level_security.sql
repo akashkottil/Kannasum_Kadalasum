@@ -161,21 +161,19 @@ CREATE POLICY "Users can delete their own expenses"
   USING (user_id = auth.uid());
 
 -- Partner invitations policies
+-- Note: We can't access auth.users table directly in RLS policies
+-- Users can view invitations they sent
 CREATE POLICY "Users can view invitations they sent or received"
   ON partner_invitations FOR SELECT
-  USING (
-    from_user_id = auth.uid() OR
-    to_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-  );
+  USING (from_user_id = auth.uid());
 
+-- Users can create invitations where they are the sender
 CREATE POLICY "Users can create invitations"
   ON partner_invitations FOR INSERT
   WITH CHECK (from_user_id = auth.uid());
 
+-- Users can update invitations they sent
 CREATE POLICY "Users can update invitations they sent or received"
   ON partner_invitations FOR UPDATE
-  USING (
-    from_user_id = auth.uid() OR
-    to_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-  );
+  USING (from_user_id = auth.uid());
 

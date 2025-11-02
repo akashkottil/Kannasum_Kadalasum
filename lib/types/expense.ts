@@ -9,6 +9,8 @@ export interface Expense {
   time: string | null;
   notes: string | null;
   custom_icon: string | null;
+  paid_by_user_id: string | null;
+  is_shared: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -22,6 +24,8 @@ export interface ExpenseFormData {
   time: string | null;
   notes?: string;
   custom_icon?: string;
+  paid_by_user_id?: string | null;
+  is_shared?: boolean;
 }
 
 export interface ExpenseFilters {

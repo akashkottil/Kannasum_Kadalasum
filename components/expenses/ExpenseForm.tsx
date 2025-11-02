@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Expense, ExpenseFormData } from '@/lib/types/expense';
 import { useCategories } from '@/lib/hooks/useCategories';
+import { useAuth } from '@/context/AuthContext';
+import { usePartner } from '@/context/PartnerContext';
 import { validateExpense } from '@/lib/utils/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +21,9 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFormProps) {
   const { categories, subcategories } = useCategories();
+  const { user } = useAuth();
+  const { partner } = usePartner();
+  const [partnerUser, setPartnerUser] = useState<{ id: string; email: string; name?: string } | null>(null);
 
   const [formData, setFormData] = useState<ExpenseFormData>({
     amount: expense?.amount || 0,
@@ -28,7 +33,28 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
     time: expense?.time || null,
     notes: expense?.notes || undefined,
     custom_icon: expense?.custom_icon || undefined,
+    paid_by_user_id: expense?.paid_by_user_id || null,
+    is_shared: expense?.is_shared || false,
   });
+
+  // Determine partner's user ID
+  useEffect(() => {
+    if (!partner || !user) {
+      setPartnerUser(null);
+      return;
+    }
+
+    const partnerUserId = partner.user1_id === user.id ? partner.user2_id : partner.user1_id;
+    setPartnerUser({
+      id: partnerUserId,
+      email: '',
+      name: 'Partner',
+    });
+  }, [partner, user]);
+
+  // Get current user's name from user metadata
+  const currentUserName = user?.user_metadata?.full_name || user?.email || 'You';
+  const partnerUserName = 'Partner';
 
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -141,6 +167,47 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
               />
             </div>
           </div>
+
+          {/* Who Paid Dropdown - Only show if partner exists */}
+          {partner && user && (
+            <div className="space-y-2">
+              <Label htmlFor="paid_by_user_id">Who Paid (Optional)</Label>
+              <Select
+                id="paid_by_user_id"
+                value={formData.paid_by_user_id || ''}
+                onChange={(e) => handleChange('paid_by_user_id', e.target.value || null)}
+                disabled={loading}
+              >
+                <option value="">Not specified</option>
+                <option value={user.id}>{currentUserName}</option>
+                <option value={partnerUser?.id || ''}>{partnerUserName}</option>
+              </Select>
+            </div>
+          )}
+
+          {/* Mark as Shared Expense - Only show if partner exists */}
+          {partner ? (
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_shared"
+                checked={formData.is_shared || false}
+                onChange={(e) => handleChange('is_shared', e.target.checked)}
+                disabled={loading}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <Label htmlFor="is_shared" className="cursor-pointer">
+                Mark as shared expense
+              </Label>
+            </div>
+          ) : (
+            <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                <strong>Note:</strong> To mark expenses as shared, you need to link with a partner first. 
+                Go to <a href="/settings" className="underline text-blue-600 dark:text-blue-400">Settings</a> to send an invitation.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>

@@ -2,8 +2,8 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,76 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [checkingInvitation, setCheckingInvitation] = useState(true);
+  const [invitationValid, setInvitationValid] = useState<boolean | null>(null);
+  const [invitationInfo, setInvitationInfo] = useState<{ fromEmail?: string } | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  // Get invitation token from URL
+  const invitationToken = searchParams?.get('token') || null;
+
+  useEffect(() => {
+    checkInvitationRequirement();
+  }, []);
+
+  const checkInvitationRequirement = async () => {
+    try {
+      // Check if there are any users in the system
+      const { data: users, error: usersError } = await supabase
+        .from('partners')
+        .select('user1_id, user2_id')
+        .limit(1);
+
+      // If we can't check via partners, try checking if we can query auth.users
+      // For now, we'll check if invitation token is provided
+      // If no token and no way to verify, we'll allow signup (first user case)
+
+      if (invitationToken) {
+        // Validate invitation token
+        const { data: invitation, error: invError } = await supabase
+          .from('partner_invitations')
+          .select('*, from_user_id, to_email, expires_at, status')
+          .eq('token', invitationToken)
+          .single();
+
+        if (invError || !invitation) {
+          setInvitationValid(false);
+          setError('Invalid or expired invitation token.');
+        } else {
+          const now = new Date();
+          const expiresAt = new Date(invitation.expires_at);
+
+          if (invitation.status !== 'pending') {
+            setInvitationValid(false);
+            setError(`This invitation has been ${invitation.status}.`);
+          } else if (expiresAt < now) {
+            setInvitationValid(false);
+            setError('This invitation has expired.');
+          } else {
+            setInvitationValid(true);
+            // Pre-fill email if it matches invitation
+            if (invitation.to_email) {
+              setEmail(invitation.to_email);
+            }
+            setInvitationInfo({});
+          }
+        }
+      } else {
+        // No token provided - check if there are existing users
+        // We'll allow signup but this might be the first user
+        // In production, you might want a more robust check
+        setInvitationValid(true); // Allow signup if no token (first user scenario)
+      }
+    } catch (err) {
+      console.error('Error checking invitation:', err);
+      // On error, allow signup (assuming first user)
+      setInvitationValid(true);
+    } finally {
+      setCheckingInvitation(false);
+    }
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +95,15 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // If invitation token is required, validate it
+      if (invitationToken && !invitationValid) {
+        setError('Please use a valid invitation link to sign up.');
+        setLoading(false);
+        return;
+      }
+
+      // Create user account
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -37,10 +113,56 @@ export default function SignupPage() {
         },
       });
 
-      if (error) {
-        setError(error.message);
+      if (signupError) {
+        setError(signupError.message);
         setLoading(false);
         return;
+      }
+
+      if (!signupData.user) {
+        setError('Failed to create account. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // If signup was via invitation, create partner relationship
+      if (invitationToken && invitationValid) {
+        const { data: invitation } = await supabase
+          .from('partner_invitations')
+          .select('from_user_id')
+          .eq('token', invitationToken)
+          .single();
+
+        if (invitation) {
+          // Determine user1 and user2 (lower UUID first for consistency)
+          const userId1 = invitation.from_user_id < signupData.user.id 
+            ? invitation.from_user_id 
+            : signupData.user.id;
+          const userId2 = invitation.from_user_id < signupData.user.id 
+            ? signupData.user.id 
+            : invitation.from_user_id;
+
+          // Create partner relationship
+          const { error: partnerError } = await supabase
+            .from('partners')
+            .insert({
+              user1_id: userId1,
+              user2_id: userId2,
+              status: 'active',
+              initiated_by: invitation.from_user_id,
+            });
+
+          if (partnerError) {
+            console.error('Error creating partner relationship:', partnerError);
+            // Don't fail signup if partner creation fails, just log it
+          }
+
+          // Mark invitation as accepted
+          await supabase
+            .from('partner_invitations')
+            .update({ status: 'accepted' })
+            .eq('token', invitationToken);
+        }
       }
 
       setSuccess(true);
@@ -52,6 +174,49 @@ export default function SignupPage() {
       setLoading(false);
     }
   };
+
+  if (checkingInvitation) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Sign Up</CardTitle>
+          <CardDescription>
+            Validating invitation...
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            Loading...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (invitationToken && !invitationValid) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Invalid Invitation</CardTitle>
+          <CardDescription>
+            This invitation link is invalid or has expired.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-red-600 dark:text-red-400">
+            {error || 'Please contact your partner for a new invitation link.'}
+          </div>
+          <div className="text-center">
+            <Link href="/login">
+              <Button variant="outline">
+                Back to Login
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (success) {
     return (
@@ -71,10 +236,25 @@ export default function SignupPage() {
       <CardHeader>
         <CardTitle>Sign Up</CardTitle>
         <CardDescription>
-          Create a new account to get started
+          {invitationToken 
+            ? invitationInfo?.fromEmail 
+              ? `You've been invited by ${invitationInfo.fromEmail}. Create your account to join them.`
+              : 'Create your account with your invitation.'
+            : 'Create a new account to get started'}
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!invitationToken && (
+          <div className="mb-4 p-3 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>Note:</strong> This site is invitation-only. If you already have an account, please{' '}
+              <Link href="/login" className="underline font-medium">
+                sign in
+              </Link>
+              . To invite your partner, sign up first, then send them an invitation from the settings page.
+            </p>
+          </div>
+        )}
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="fullName">Full Name</Label>

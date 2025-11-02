@@ -7,7 +7,10 @@ import { format, startOfMonth, endOfMonth, startOfDay, subMonths, eachDayOfInter
 import { CategoryDistribution, ExpenseTrend, UserComparison, MonthlyStats } from '@/lib/types/analytics';
 import { calculateTotal, calculateDailyAverage, groupByCategory, groupByDate } from '@/lib/utils/calculations';
 
-export function useAnalytics(period: 'month' | 'week' | 'all' = 'month') {
+export function useAnalytics(
+  period: 'month' | 'week' | 'all' = 'month',
+  expenseFilter: 'all' | 'shared' | 'individual' = 'all'
+) {
   const { expenses, loading } = useExpenses();
   const { categories } = useCategories();
 
@@ -20,6 +23,17 @@ export function useAnalytics(period: 'month' | 'week' | 'all' = 'month') {
   const filteredExpenses = useMemo(() => {
     if (!expenses.length) return [];
 
+    let filtered = expenses;
+
+    // Filter by expense type (shared/individual)
+    if (expenseFilter === 'shared') {
+      filtered = filtered.filter(expense => expense.is_shared === true);
+    } else if (expenseFilter === 'individual') {
+      filtered = filtered.filter(expense => expense.is_shared === false || expense.is_shared === null);
+    }
+    // If expenseFilter === 'all', no filtering needed
+
+    // Filter by time period
     const now = new Date();
     const startDate = period === 'month' 
       ? startOfMonth(now)
@@ -27,13 +41,13 @@ export function useAnalytics(period: 'month' | 'week' | 'all' = 'month') {
       ? startOfDay(subMonths(now, 1))
       : null;
 
-    if (!startDate) return expenses;
+    if (!startDate) return filtered;
 
-    return expenses.filter(expense => {
+    return filtered.filter(expense => {
       const expenseDate = parseISO(expense.date);
       return expenseDate >= startDate;
     });
-  }, [expenses, period]);
+  }, [expenses, period, expenseFilter]);
 
   const monthlyStats: MonthlyStats = useMemo(() => {
     const total = calculateTotal(filteredExpenses);

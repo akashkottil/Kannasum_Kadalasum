@@ -10,7 +10,8 @@ import { Select } from '@/components/ui/select';
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<'month' | 'week' | 'all'>('month');
-  const { categoryDistribution, expenseTrends, monthlyStats, loading } = useAnalytics(period);
+  const [expenseFilter, setExpenseFilter] = useState<'all' | 'shared' | 'individual'>('all');
+  const { categoryDistribution, expenseTrends, monthlyStats, loading } = useAnalytics(period, expenseFilter);
 
   return (
     <div className="space-y-6">
@@ -21,15 +22,26 @@ export default function AnalyticsPage() {
             Insights into your spending patterns
           </p>
         </div>
-        <Select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as 'month' | 'week' | 'all')}
-          className="w-32"
-        >
-          <option value="month">Monthly</option>
-          <option value="week">Weekly</option>
-          <option value="all">All Time</option>
-        </Select>
+        <div className="flex gap-3">
+          <Select
+            value={expenseFilter}
+            onChange={(e) => setExpenseFilter(e.target.value as 'all' | 'shared' | 'individual')}
+            className="w-40"
+          >
+            <option value="all">All Expenses</option>
+            <option value="shared">Shared Only</option>
+            <option value="individual">Individual Only</option>
+          </Select>
+          <Select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as 'month' | 'week' | 'all')}
+            className="w-32"
+          >
+            <option value="month">Monthly</option>
+            <option value="week">Weekly</option>
+            <option value="all">All Time</option>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

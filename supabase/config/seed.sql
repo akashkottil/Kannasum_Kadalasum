@@ -24,6 +24,10 @@ INSERT INTO subcategories (category_id, name, icon, color)
 SELECT id, 'Coffee', '☕', '#FFE0E0'
 FROM categories WHERE name = 'Food' AND user_id IS NULL;
 
+INSERT INTO subcategories (category_id, name, icon, color)
+SELECT id, 'Tea', '🍵', '#FFE5E0'
+FROM categories WHERE name = 'Food' AND user_id IS NULL;
+
 -- Petrol category
 INSERT INTO categories (name, icon, color, user_id)
 VALUES ('Petrol', '⛽', '#4ECDC4', NULL);
