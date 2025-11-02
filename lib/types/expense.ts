@@ -11,6 +11,8 @@ export interface Expense {
   custom_icon: string | null;
   paid_by_user_id: string | null;
   is_shared: boolean;
+  amount_paid_by_user: number | null;
+  amount_paid_by_partner: number | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -26,6 +28,8 @@ export interface ExpenseFormData {
   custom_icon?: string;
   paid_by_user_id?: string | null;
   is_shared?: boolean;
+  amount_paid_by_user?: number | null;
+  amount_paid_by_partner?: number | null;
 }
 
 export interface ExpenseFilters {

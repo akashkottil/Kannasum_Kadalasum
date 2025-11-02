@@ -109,6 +109,12 @@ export function useExpenses(filters?: ExpenseFilters) {
           user_id: user.id,
           partner_id: partnerId,
           is_shared: expenseData.is_shared || false,
+          amount_paid_by_user: expenseData.is_shared && expenseData.amount_paid_by_user !== undefined 
+            ? expenseData.amount_paid_by_user 
+            : null,
+          amount_paid_by_partner: expenseData.is_shared && expenseData.amount_paid_by_partner !== undefined 
+            ? expenseData.amount_paid_by_partner 
+            : null,
         })
         .select()
         .single();
@@ -141,6 +147,12 @@ export function useExpenses(filters?: ExpenseFilters) {
         ...expenseData,
         partner_id: expenseData.is_shared ? partnerId : null,
         is_shared: expenseData.is_shared || false,
+        amount_paid_by_user: expenseData.is_shared && expenseData.amount_paid_by_user !== undefined 
+          ? expenseData.amount_paid_by_user 
+          : null,
+        amount_paid_by_partner: expenseData.is_shared && expenseData.amount_paid_by_partner !== undefined 
+          ? expenseData.amount_paid_by_partner 
+          : null,
       };
 
       const { error: updateError } = await supabase

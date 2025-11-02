@@ -33,3 +33,24 @@ export interface AnalyticsFilters {
   period: 'day' | 'week' | 'month' | 'custom';
 }
 
+export interface SubcategoryDistribution {
+  subcategory_id: string;
+  subcategory_name: string;
+  category_id: string;
+  category_name: string;
+  amount: number;
+  percentage: number;
+  icon: string;
+  color: string;
+}
+
+export interface SpendingSummary {
+  total_spend: number;
+  shared_spend: number;
+  individual_spend: number;
+  your_share_of_shared: number;
+  partner_share_of_shared: number;
+  total_spend_by_category: CategoryDistribution[];
+  total_spend_by_subcategory: SubcategoryDistribution[];
+}
+

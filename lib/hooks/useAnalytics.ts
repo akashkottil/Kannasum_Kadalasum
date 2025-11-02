@@ -4,15 +4,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { useExpenses } from './useExpenses';
 import { useCategories } from './useCategories';
 import { format, startOfMonth, endOfMonth, startOfDay, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
-import { CategoryDistribution, ExpenseTrend, UserComparison, MonthlyStats } from '@/lib/types/analytics';
+import { CategoryDistribution, ExpenseTrend, UserComparison, MonthlyStats, SubcategoryDistribution, SpendingSummary } from '@/lib/types/analytics';
 import { calculateTotal, calculateDailyAverage, groupByCategory, groupByDate } from '@/lib/utils/calculations';
+import { useAuth } from '@/context/AuthContext';
 
 export function useAnalytics(
   period: 'month' | 'week' | 'all' = 'month',
   expenseFilter: 'all' | 'shared' | 'individual' = 'all'
 ) {
   const { expenses, loading } = useExpenses();
-  const { categories } = useCategories();
+  const { categories, subcategories } = useCategories();
+  const { user } = useAuth();
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
@@ -119,11 +121,115 @@ export function useAnalytics(
       .reduce((sum, exp) => sum + exp.amount, 0);
   }, [expenses]);
 
+  // Calculate spending summary with splits
+  const spendingSummary: SpendingSummary = useMemo(() => {
+    let totalSpend = 0;
+    let sharedSpend = 0;
+    let individualSpend = 0;
+    let yourShareOfShared = 0;
+    let partnerShareOfShared = 0;
+
+    const categoryMap = new Map<string, number>();
+    const subcategoryMap = new Map<string, { amount: number; category_id: string }>();
+
+    filteredExpenses.forEach(expense => {
+      totalSpend += expense.amount;
+
+      if (expense.is_shared) {
+        sharedSpend += expense.amount;
+        
+        // Calculate your share and partner's share
+        if (expense.user_id === user?.id) {
+          // Expense added by current user
+          if (expense.amount_paid_by_user !== null && expense.amount_paid_by_user !== undefined) {
+            yourShareOfShared += expense.amount_paid_by_user;
+          } else {
+            // If not split, use full amount for user who added it
+            yourShareOfShared += expense.amount;
+          }
+          if (expense.amount_paid_by_partner !== null && expense.amount_paid_by_partner !== undefined) {
+            partnerShareOfShared += expense.amount_paid_by_partner;
+          }
+        } else {
+          // Expense added by partner
+          if (expense.amount_paid_by_partner !== null && expense.amount_paid_by_partner !== undefined) {
+            yourShareOfShared += expense.amount_paid_by_partner;
+          }
+          if (expense.amount_paid_by_user !== null && expense.amount_paid_by_user !== undefined) {
+            partnerShareOfShared += expense.amount_paid_by_user;
+          } else {
+            // If not split, use full amount for partner who added it
+            partnerShareOfShared += expense.amount;
+          }
+        }
+      } else {
+        individualSpend += expense.amount;
+      }
+
+      // Category totals
+      const catAmount = categoryMap.get(expense.category_id) || 0;
+      categoryMap.set(expense.category_id, catAmount + expense.amount);
+
+      // Subcategory totals
+      if (expense.subcategory_id) {
+        const subcatKey = expense.subcategory_id;
+        const subcatData = subcategoryMap.get(subcatKey) || { amount: 0, category_id: expense.category_id };
+        subcatData.amount += expense.amount;
+        subcategoryMap.set(subcatKey, subcatData);
+      }
+    });
+
+    // Build category distribution
+    const categoryBreakdown: CategoryDistribution[] = Array.from(categoryMap.entries())
+      .map(([category_id, amount]) => {
+        const category = categories.find(c => c.id === category_id);
+        return {
+          category_id,
+          category_name: category?.name || 'Unknown',
+          amount,
+          percentage: totalSpend > 0 ? (amount / totalSpend) * 100 : 0,
+          icon: category?.icon || '💰',
+          color: category?.color || '#999',
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+
+    // Build subcategory distribution
+    const subcategoryBreakdown: SubcategoryDistribution[] = Array.from(subcategoryMap.entries())
+      .map(([subcategory_id, data]) => {
+        const subcategory = subcategories.find(sub => sub.id === subcategory_id);
+        const category = categories.find(c => c.id === data.category_id);
+        
+        return {
+          subcategory_id,
+          subcategory_name: subcategory?.name || 'Unknown',
+          category_id: data.category_id,
+          category_name: category?.name || 'Unknown',
+          amount: data.amount,
+          percentage: totalSpend > 0 ? (data.amount / totalSpend) * 100 : 0,
+          icon: subcategory?.icon || '💰',
+          color: subcategory?.color || '#999',
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+
+    return {
+      total_spend: totalSpend,
+      shared_spend: sharedSpend,
+      individual_spend: individualSpend,
+      your_share_of_shared: yourShareOfShared,
+      partner_share_of_shared: partnerShareOfShared,
+      total_spend_by_category: categoryBreakdown,
+      total_spend_by_subcategory: subcategoryBreakdown,
+    };
+  }, [filteredExpenses, categories, subcategories, user]);
+
   return {
     monthlyStats,
     categoryDistribution,
     expenseTrends,
     currentMonthTotal,
+    spendingSummary,
     loading: analyticsLoading,
     totalExpenses: calculateTotal(expenses),
   };

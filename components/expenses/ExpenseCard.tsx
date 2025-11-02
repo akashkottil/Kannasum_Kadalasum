@@ -87,6 +87,29 @@ export function ExpenseCard({ expense, categoryName, subcategoryName, onEdit, on
                   <span>{paidByName}</span>
                 </div>
               )}
+              {expense.is_shared && expense.amount_paid_by_user !== null && expense.amount_paid_by_partner !== null && (
+                <div className="flex items-center gap-2 mt-1 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex-1">
+                    <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Expense Split:</span>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 space-y-0.5">
+                      <div>
+                        {expenseOwner === 'You' ? 'Your share' : `${expenseOwner}'s share`}: {formatCurrency(
+                          expense.user_id === user?.id 
+                            ? (expense.amount_paid_by_user || 0)
+                            : (expense.amount_paid_by_partner || 0)
+                        )}
+                      </div>
+                      <div>
+                        {expenseOwner === 'You' ? "Partner's share" : 'Your share'}: {formatCurrency(
+                          expense.user_id === user?.id 
+                            ? (expense.amount_paid_by_partner || 0)
+                            : (expense.amount_paid_by_user || 0)
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {expense.notes && (
                 <div className="mt-2 text-gray-700 dark:text-gray-300 italic">
                   "{expense.notes}"

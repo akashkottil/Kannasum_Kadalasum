@@ -35,6 +35,8 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
     custom_icon: expense?.custom_icon || undefined,
     paid_by_user_id: expense?.paid_by_user_id || null,
     is_shared: expense?.is_shared || false,
+    amount_paid_by_user: expense?.amount_paid_by_user || null,
+    amount_paid_by_partner: expense?.amount_paid_by_partner || null,
   });
 
   // Determine partner's user ID
@@ -187,18 +189,116 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
 
           {/* Mark as Shared Expense - Only show if partner exists */}
           {partner ? (
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is_shared"
-                checked={formData.is_shared || false}
-                onChange={(e) => handleChange('is_shared', e.target.checked)}
-                disabled={loading}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <Label htmlFor="is_shared" className="cursor-pointer">
-                Mark as shared expense
-              </Label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="is_shared"
+                  checked={formData.is_shared || false}
+                  onChange={(e) => {
+                    handleChange('is_shared', e.target.checked);
+                    // If unchecking shared, clear split amounts
+                    if (!e.target.checked) {
+                      handleChange('amount_paid_by_user', null);
+                      handleChange('amount_paid_by_partner', null);
+                    } else {
+                      // If checking shared, set default split (equal or based on who paid)
+                      if (!formData.amount_paid_by_user && !formData.amount_paid_by_partner) {
+                        // Default: split equally
+                        const half = formData.amount / 2;
+                        handleChange('amount_paid_by_user', half);
+                        handleChange('amount_paid_by_partner', half);
+                      }
+                    }
+                  }}
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <Label htmlFor="is_shared" className="cursor-pointer">
+                  Mark as shared expense
+                </Label>
+              </div>
+
+              {/* Split Expense Fields - Show when shared is checked */}
+              {formData.is_shared && (
+                <div className="pl-6 space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <Label className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Split the Expense (Optional)
+                  </Label>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                    Specify how much each person paid. Total must equal the expense amount.
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount_paid_by_user" className="text-xs">
+                        Your Share (₹)
+                      </Label>
+                      <Input
+                        id="amount_paid_by_user"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max={formData.amount}
+                        value={formData.amount_paid_by_user || ''}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          handleChange('amount_paid_by_user', value);
+                          // Auto-calculate partner's share
+                          const remaining = Math.max(0, formData.amount - value);
+                          handleChange('amount_paid_by_partner', remaining);
+                        }}
+                        disabled={loading}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="amount_paid_by_partner" className="text-xs">
+                        Partner's Share (₹)
+                      </Label>
+                      <Input
+                        id="amount_paid_by_partner"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max={formData.amount}
+                        value={formData.amount_paid_by_partner || ''}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          handleChange('amount_paid_by_partner', value);
+                          // Auto-calculate user's share
+                          const remaining = Math.max(0, formData.amount - value);
+                          handleChange('amount_paid_by_user', remaining);
+                        }}
+                        disabled={loading}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Show total and validation */}
+                  <div className="text-xs pt-2 border-t border-blue-200 dark:border-blue-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700 dark:text-blue-300">Total:</span>
+                      <span className={`font-medium ${
+                        (formData.amount_paid_by_user || 0) + (formData.amount_paid_by_partner || 0) === formData.amount
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                      }`}>
+                        ₹{((formData.amount_paid_by_user || 0) + (formData.amount_paid_by_partner || 0)).toFixed(2)}
+                        {' / '}
+                        ₹{formData.amount.toFixed(2)}
+                      </span>
+                    </div>
+                    {(formData.amount_paid_by_user || 0) + (formData.amount_paid_by_partner || 0) !== formData.amount && (
+                      <p className="text-red-600 dark:text-red-400 mt-1">
+                        Split amounts must equal total expense amount
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-3 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">

@@ -23,6 +23,28 @@ export function validateExpense(data: ExpenseFormData): string[] {
     errors.push('Invalid time format');
   }
 
+  // Validate split amounts for shared expenses
+  if (data.is_shared) {
+    const userAmount = data.amount_paid_by_user || 0;
+    const partnerAmount = data.amount_paid_by_partner || 0;
+    const totalSplit = userAmount + partnerAmount;
+    const tolerance = 0.01; // Allow small floating point differences
+
+    // If split amounts are provided, they must sum to total
+    if ((data.amount_paid_by_user !== null && data.amount_paid_by_user !== undefined) ||
+        (data.amount_paid_by_partner !== null && data.amount_paid_by_partner !== undefined)) {
+      if (Math.abs(totalSplit - data.amount) > tolerance) {
+        errors.push(`Split amounts (₹${totalSplit.toFixed(2)}) must equal total expense (₹${data.amount.toFixed(2)})`);
+      }
+      if (userAmount < 0 || partnerAmount < 0) {
+        errors.push('Split amounts cannot be negative');
+      }
+      if (userAmount > data.amount || partnerAmount > data.amount) {
+        errors.push('Split amounts cannot exceed total expense amount');
+      }
+    }
+  }
+
   return errors;
 }
 
