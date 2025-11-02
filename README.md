@@ -163,6 +163,19 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 MIT License
 
+## Deployment
+
+This project can be easily deployed to Vercel. See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instructions.
+
+### Quick Deploy to Vercel
+
+1. Push your code to GitHub
+2. Import your repository in Vercel
+3. Add environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy!
+
 ## Support
 
 For issues and questions, please open an issue on the repository.
