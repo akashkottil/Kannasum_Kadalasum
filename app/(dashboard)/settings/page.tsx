@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy, Check, X, Mail, UserPlus } from 'lucide-react';
+import { Copy, Check, X, Mail, UserPlus, RefreshCw } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -170,8 +170,46 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await refreshPartner();
+                  window.location.reload();
+                }}
+                className="w-full"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Partner Status
+              </Button>
             </div>
           ) : (
+            <div className="space-y-4">
+              {/* Refresh button for users waiting for partner */}
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await refreshPartner();
+                  // Force a re-check by querying directly
+                  const { data: partnerData } = await supabase
+                    .from('partners')
+                    .select('*')
+                    .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
+                    .eq('status', 'active')
+                    .single();
+                  
+                  if (partnerData) {
+                    await refreshPartner();
+                    alert('Partner found! Refreshing page...');
+                    window.location.reload();
+                  } else {
+                    alert('No partner linked yet. Make sure your partner has signed up using the invitation link you sent them. If they already signed up, the partner relationship might not have been created. Check the browser console for errors.');
+                  }
+                }}
+                className="w-full mb-4"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Check Partner Status
+              </Button>
             <div className="space-y-4">
               <form onSubmit={handleSendInvitation} className="space-y-4">
                 <div className="space-y-2">

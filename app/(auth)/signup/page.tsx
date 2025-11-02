@@ -143,25 +143,42 @@ function SignupPageContent() {
             : invitation.from_user_id;
 
           // Create partner relationship
-          const { error: partnerError } = await supabase
+          const { data: partnerData, error: partnerError } = await supabase
             .from('partners')
             .insert({
               user1_id: userId1,
               user2_id: userId2,
               status: 'active',
               initiated_by: invitation.from_user_id,
-            });
+            })
+            .select()
+            .single();
 
           if (partnerError) {
             console.error('Error creating partner relationship:', partnerError);
-            // Don't fail signup if partner creation fails, just log it
+            // Log detailed error for debugging
+            console.error('Partner creation details:', {
+              userId1,
+              userId2,
+              currentUserId: signupData.user.id,
+              invitationFromUserId: invitation.from_user_id,
+              error: partnerError,
+            });
+            // Still continue with signup, but show a warning
+            setError('Account created successfully, but partner linking failed. Please contact support or try linking manually from Settings.');
+          } else if (partnerData) {
+            console.log('Partner relationship created successfully:', partnerData);
           }
 
           // Mark invitation as accepted
-          await supabase
+          const { error: updateError } = await supabase
             .from('partner_invitations')
             .update({ status: 'accepted' })
             .eq('token', invitationToken);
+          
+          if (updateError) {
+            console.error('Error updating invitation status:', updateError);
+          }
         }
       }
 
