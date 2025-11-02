@@ -21,7 +21,18 @@ export function PieChartComponent({ data, height = 300 }: PieChartProps) {
   }
 
   // Transform data to match Recharts expected format
-  const chartData = data.map((item) => ({
+  interface ChartDataItem {
+    name: string;
+    value: number;
+    amount: number;
+    percentage: number;
+    color: string;
+    icon: string;
+    category_id: string;
+    [key: string]: string | number;
+  }
+  
+  const chartData: ChartDataItem[] = data.map((item): ChartDataItem => ({
     name: item.category_name,
     value: item.amount,
     amount: item.amount,
@@ -35,7 +46,7 @@ export function PieChartComponent({ data, height = 300 }: PieChartProps) {
     <ResponsiveContainer width="100%" height={height}>
       <RechartsPieChart>
         <Pie
-          data={chartData}
+          data={chartData as any}
           cx="50%"
           cy="50%"
           labelLine={false}
