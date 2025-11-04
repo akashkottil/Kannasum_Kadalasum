@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAnalytics } from '@/lib/hooks/useAnalytics';
+import { usePaymentSources } from '@/lib/hooks/usePaymentSources';
 import { PieChartComponent } from '@/components/charts/PieChart';
 import { BarChartComponent } from '@/components/charts/BarChart';
 import { LineChartComponent } from '@/components/charts/LineChart';
@@ -9,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 
 import { formatCurrency } from '@/lib/utils/formatters';
-import { TrendingUp, TrendingDown, DollarSign, Users, User, ShoppingBag } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, User, ShoppingBag, CreditCard } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<'month' | 'week' | 'all'>('month');
   const [expenseFilter, setExpenseFilter] = useState<'all' | 'shared' | 'individual'>('all');
-  const { categoryDistribution, expenseTrends, monthlyStats, spendingSummary, loading } = useAnalytics(period, expenseFilter);
+  const [paymentSourceFilter, setPaymentSourceFilter] = useState<string>('');
+  const { paymentSources } = usePaymentSources();
+  const { categoryDistribution, expenseTrends, monthlyStats, spendingSummary, loading } = useAnalytics(period, expenseFilter, paymentSourceFilter || undefined);
 
   return (
     <div className="space-y-6">
@@ -34,6 +37,18 @@ export default function AnalyticsPage() {
             <option value="all">All Expenses</option>
             <option value="shared">Shared Only</option>
             <option value="individual">Individual Only</option>
+          </Select>
+          <Select
+            value={paymentSourceFilter}
+            onChange={(e) => setPaymentSourceFilter(e.target.value)}
+            className="w-48"
+          >
+            <option value="">All Payment Sources</option>
+            {paymentSources.map((source) => (
+              <option key={source.id} value={source.id}>
+                {source.icon} {source.name}
+              </option>
+            ))}
           </Select>
           <Select
             value={period}
@@ -258,6 +273,218 @@ export default function AnalyticsPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Payment Source Analysis */}
+      {spendingSummary?.total_spend_by_payment_source && spendingSummary.total_spend_by_payment_source.length > 0 && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Spending by Payment Source
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <PieChartComponent 
+                  data={spendingSummary.total_spend_by_payment_source.map(item => ({
+                    name: item.payment_source_name,
+                    value: item.amount,
+                    icon: item.icon || '💰',
+                  }))} 
+                  height={300} 
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Source Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Payment Source</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Type</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Amount</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Percentage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {spendingSummary.total_spend_by_payment_source.map((item) => (
+                        <tr key={item.payment_source_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{item.icon || '💰'}</span>
+                              <span className="font-medium">{item.payment_source_name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-sm capitalize">{item.type.replace('_', ' ')}</span>
+                          </td>
+                          <td className="text-right py-3 px-4 font-medium">{formatCurrency(item.amount)}</td>
+                          <td className="text-right py-3 px-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div
+                                  className="bg-purple-500 h-2 rounded-full"
+                                  style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right">
+                                {item.percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* Credit Card Spending Analytics */}
+      {spendingSummary?.credit_card_spending && spendingSummary.credit_card_spending.length > 0 && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Credit Card Spending Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {spendingSummary.credit_card_spending.map((cardData) => (
+                    <div key={cardData.card_name} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0 last:pb-0">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold">{cardData.card_name}</h4>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Total Spend</div>
+                          <div className="text-xl font-bold text-red-600 dark:text-red-400">
+                            {formatCurrency(cardData.total_spend)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {cardData.category_breakdown.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Spending by Category:
+                          </div>
+                          <div className="space-y-2">
+                            {cardData.category_breakdown.map((cat, idx) => (
+                              <div key={idx} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">{cat.category_name}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div
+                                      className="bg-blue-500 h-2 rounded-full"
+                                      style={{ width: `${Math.min(cat.percentage, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-medium w-20 text-right">
+                                    {formatCurrency(cat.amount)}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">
+                                    {cat.percentage.toFixed(1)}%
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          No category breakdown available
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Credit Card Spending Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+                  Loading...
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Credit Card</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Total Spend</th>
+                        <th className="text-right py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Percentage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {spendingSummary.credit_card_spending.map((cardData) => {
+                        const totalCCSpend = spendingSummary.credit_card_spending.reduce((sum, c) => sum + c.total_spend, 0);
+                        const percentage = totalCCSpend > 0 ? (cardData.total_spend / totalCCSpend) * 100 : 0;
+                        return (
+                          <tr key={cardData.card_name} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xl">💳</span>
+                                <span className="font-medium">{cardData.card_name}</span>
+                              </div>
+                            </td>
+                            <td className="text-right py-3 px-4 font-medium text-red-600 dark:text-red-400">
+                              {formatCurrency(cardData.total_spend)}
+                            </td>
+                            <td className="text-right py-3 px-4">
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                  <div
+                                    className="bg-red-500 h-2 rounded-full"
+                                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right">
+                                  {percentage.toFixed(1)}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

@@ -12,11 +12,12 @@ interface ExpenseCardProps {
   expense: Expense;
   categoryName?: string;
   subcategoryName?: string;
+  paymentSourceName?: string;
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
 }
 
-export function ExpenseCard({ expense, categoryName, subcategoryName, onEdit, onDelete }: ExpenseCardProps) {
+export function ExpenseCard({ expense, categoryName, subcategoryName, paymentSourceName, onEdit, onDelete }: ExpenseCardProps) {
   const { user } = useAuth();
   const { partner } = usePartner();
 
@@ -69,6 +70,12 @@ export function ExpenseCard({ expense, categoryName, subcategoryName, onEdit, on
                 <div className="flex items-center gap-1">
                   <span className="font-medium">Subcategory:</span>
                   <span>{subcategoryName}</span>
+                </div>
+              )}
+              {paymentSourceName && (
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">Payment Source:</span>
+                  <span>{paymentSourceName}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">

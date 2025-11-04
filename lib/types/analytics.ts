@@ -44,6 +44,25 @@ export interface SubcategoryDistribution {
   color: string;
 }
 
+export interface PaymentSourceDistribution {
+  payment_source_id: string;
+  payment_source_name: string;
+  amount: number;
+  percentage: number;
+  icon: string | null;
+  type: 'credit_card' | 'savings_account';
+}
+
+export interface CreditCardSpending {
+  card_name: string;
+  total_spend: number;
+  category_breakdown: {
+    category_name: string;
+    amount: number;
+    percentage: number;
+  }[];
+}
+
 export interface SpendingSummary {
   total_spend: number;
   shared_spend: number;
@@ -52,5 +71,7 @@ export interface SpendingSummary {
   partner_share_of_shared: number;
   total_spend_by_category: CategoryDistribution[];
   total_spend_by_subcategory: SubcategoryDistribution[];
+  total_spend_by_payment_source: PaymentSourceDistribution[];
+  credit_card_spending: CreditCardSpending[];
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Expense, ExpenseFormData } from '@/lib/types/expense';
 import { useCategories } from '@/lib/hooks/useCategories';
+import { usePaymentSources } from '@/lib/hooks/usePaymentSources';
 import { useAuth } from '@/context/AuthContext';
 import { usePartner } from '@/context/PartnerContext';
 import { validateExpense } from '@/lib/utils/validations';
@@ -21,6 +22,7 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFormProps) {
   const { categories, subcategories } = useCategories();
+  const { paymentSources } = usePaymentSources();
   const { user } = useAuth();
   const { partner } = usePartner();
   const [partnerUser, setPartnerUser] = useState<{ id: string; email: string; name?: string } | null>(null);
@@ -37,6 +39,7 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
     is_shared: expense?.is_shared || false,
     amount_paid_by_user: expense?.amount_paid_by_user || null,
     amount_paid_by_partner: expense?.amount_paid_by_partner || null,
+    payment_source_id: expense?.payment_source_id || null,
   });
 
   // Determine partner's user ID
@@ -63,6 +66,11 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
   // Get subcategories for the selected category
   const availableSubcategories = subcategories.filter(
     sub => sub.category_id === formData.category_id
+  );
+
+  // Check if Credit Card Repayment category is selected
+  const isCreditCardRepaymentCategory = categories.find(
+    cat => cat.id === formData.category_id && cat.name === 'Credit Card Repayment'
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,14 +136,17 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
 
           {availableSubcategories.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="subcategory_id">Subcategory (Optional)</Label>
+              <Label htmlFor="subcategory_id">
+                {isCreditCardRepaymentCategory ? 'Select a Card' : 'Subcategory (Optional)'}
+              </Label>
               <Select
                 id="subcategory_id"
                 value={formData.subcategory_id || ''}
                 onChange={(e) => handleChange('subcategory_id', e.target.value || null)}
                 disabled={loading}
+                required={isCreditCardRepaymentCategory}
               >
-                <option value="">None</option>
+                <option value="">{isCreditCardRepaymentCategory ? 'Select a credit card' : 'None'}</option>
                 {availableSubcategories.map((subcategory) => (
                   <option key={subcategory.id} value={subcategory.id}>
                     {subcategory.icon} {subcategory.name}
@@ -168,6 +179,24 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
                 disabled={loading}
               />
             </div>
+          </div>
+
+          {/* Payment Source Dropdown */}
+          <div className="space-y-2">
+            <Label htmlFor="payment_source_id">Payment Source (Optional)</Label>
+            <Select
+              id="payment_source_id"
+              value={formData.payment_source_id || ''}
+              onChange={(e) => handleChange('payment_source_id', e.target.value || null)}
+              disabled={loading}
+            >
+              <option value="">Not specified</option>
+              {paymentSources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.icon} {source.name}
+                </option>
+              ))}
+            </Select>
           </div>
 
           {/* Who Paid Dropdown - Only show if partner exists */}

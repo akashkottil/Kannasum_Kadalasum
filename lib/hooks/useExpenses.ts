@@ -4,14 +4,19 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { usePartner } from '@/context/PartnerContext';
+import { useCategories } from './useCategories';
+import { usePaymentSources } from './usePaymentSources';
 import { Expense, ExpenseFormData, ExpenseFilters } from '@/lib/types/expense';
 
 export function useExpenses(filters?: ExpenseFilters) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { partner } = usePartner();
+  const { categories, subcategories } = useCategories();
+  const { paymentSources } = usePaymentSources();
   const supabase = useMemo(() => createClient(), []);
   const filtersRef = useRef(filters);
 
@@ -19,6 +24,88 @@ export function useExpenses(filters?: ExpenseFilters) {
   useEffect(() => {
     filtersRef.current = filters;
   }, [filters]);
+
+  // Helper function to sync credit card balances from expenses
+  const syncCreditCardBalances = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      // Fetch all expenses for the user (including partner's if partner exists)
+      let expenseQuery = supabase
+        .from('expenses')
+        .select('*')
+        .is('deleted_at', null);
+
+      if (partner) {
+        expenseQuery = expenseQuery.or(`user_id.eq.${partner.user1_id},user_id.eq.${partner.user2_id}`);
+      } else {
+        expenseQuery = expenseQuery.eq('user_id', user.id);
+      }
+
+      const { data: allUserExpenses, error: expenseError } = await expenseQuery;
+      if (expenseError) throw expenseError;
+
+      // Fetch credit cards for the user
+      const { data: userCreditCards, error: cardError } = await supabase
+        .from('credit_cards')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (cardError) throw cardError;
+      if (!userCreditCards || userCreditCards.length === 0) return;
+
+      // Get payment sources to map credit card names
+      const { data: paymentSourcesData } = await supabase
+        .from('payment_sources')
+        .select('*')
+        .eq('type', 'credit_card');
+
+      // Get categories to identify Credit Card Repayment category
+      const { data: categoriesData } = await supabase
+        .from('categories')
+        .select('*');
+
+      // Get subcategories to map repayment subcategory to card name
+      const { data: subcategoriesData } = await supabase
+        .from('subcategories')
+        .select('*');
+
+      const ccRepaymentCategory = categoriesData?.find(cat => cat.name === 'Credit Card Repayment');
+      const paymentSourceMap = new Map(paymentSourcesData?.map(ps => [ps.name, ps.id]) || []);
+      const subcategoryMap = new Map(subcategoriesData?.map(sub => [sub.id, sub.name]) || []);
+
+      // Calculate balance for each credit card
+      for (const card of userCreditCards) {
+        let balance = 0;
+
+        // Find payment source ID for this card
+        const paymentSourceId = paymentSourceMap.get(card.card_name);
+
+        allUserExpenses?.forEach(expense => {
+          // If expense uses this credit card as payment source, increase balance
+          if (expense.payment_source_id === paymentSourceId) {
+            balance += expense.amount;
+          }
+
+          // If expense is Credit Card Repayment for this card, decrease balance
+          if (expense.category_id === ccRepaymentCategory?.id && expense.subcategory_id) {
+            const subcategoryName = subcategoryMap.get(expense.subcategory_id);
+            if (subcategoryName === card.card_name) {
+              balance -= expense.amount;
+            }
+          }
+        });
+
+        // Update credit card balance
+        await supabase
+          .from('credit_cards')
+          .update({ current_balance: Math.max(0, balance) })
+          .eq('id', card.id);
+      }
+    } catch (err) {
+      console.error('Error syncing credit card balances:', err);
+    }
+  }, [user, partner, supabase]);
 
   const fetchExpenses = useCallback(async () => {
     if (!user) return;
@@ -69,13 +156,17 @@ export function useExpenses(filters?: ExpenseFilters) {
         query = query.eq('user_id', currentFilters.user_id);
       }
 
+      if (currentFilters?.payment_source_id) {
+        query = query.eq('payment_source_id', currentFilters.payment_source_id);
+      }
+
       const { data, error: fetchError } = await query;
 
       if (fetchError) {
         throw fetchError;
       }
 
-      setExpenses(data || []);
+      setAllExpenses(data || []);
     } catch (err) {
       console.error('Error fetching expenses:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch expenses');
@@ -83,6 +174,69 @@ export function useExpenses(filters?: ExpenseFilters) {
       setLoading(false);
     }
   }, [user, partner, supabase]);
+
+  // Apply client-side search, filter, and sort
+  const filteredAndSortedExpenses = useMemo(() => {
+    let result = [...allExpenses];
+    const currentFilters = filters || filtersRef.current;
+
+    // Apply search query
+    if (currentFilters?.search_query && currentFilters.search_query.trim()) {
+      const searchLower = currentFilters.search_query.toLowerCase().trim();
+      const categoryMap = new Map(categories.map(cat => [cat.id, cat.name.toLowerCase()]));
+      const subcategoryMap = new Map(subcategories.map(sub => [sub.id, sub.name.toLowerCase()]));
+      const paymentSourceMap = new Map(paymentSources.map(ps => [ps.id, ps.name.toLowerCase()]));
+
+      result = result.filter(expense => {
+        const categoryName = categoryMap.get(expense.category_id) || '';
+        const subcategoryName = expense.subcategory_id ? (subcategoryMap.get(expense.subcategory_id) || '') : '';
+        const paymentSourceName = expense.payment_source_id ? (paymentSourceMap.get(expense.payment_source_id) || '') : '';
+        const notes = (expense.notes || '').toLowerCase();
+
+        return categoryName.includes(searchLower) ||
+               subcategoryName.includes(searchLower) ||
+               paymentSourceName.includes(searchLower) ||
+               notes.includes(searchLower);
+      });
+    }
+
+    // Apply sorting
+    if (currentFilters?.sort_by) {
+      const sortBy = currentFilters.sort_by;
+      const sortOrder = currentFilters.sort_order || 'desc';
+
+      result.sort((a, b) => {
+        let comparison = 0;
+
+        if (sortBy === 'date') {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          comparison = dateA - dateB;
+        } else if (sortBy === 'amount') {
+          comparison = a.amount - b.amount;
+        } else if (sortBy === 'category') {
+          const categoryA = categories.find(c => c.id === a.category_id)?.name || '';
+          const categoryB = categories.find(c => c.id === b.category_id)?.name || '';
+          comparison = categoryA.localeCompare(categoryB);
+        }
+
+        return sortOrder === 'asc' ? comparison : -comparison;
+      });
+    } else {
+      // Default sort by date descending
+      result.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA;
+      });
+    }
+
+    return result;
+  }, [allExpenses, categories, subcategories, paymentSources, filters]);
+
+  useEffect(() => {
+    setExpenses(filteredAndSortedExpenses);
+  }, [filteredAndSortedExpenses]);
 
   useEffect(() => {
     if (!user) {
@@ -115,6 +269,7 @@ export function useExpenses(filters?: ExpenseFilters) {
           amount_paid_by_partner: expenseData.is_shared && expenseData.amount_paid_by_partner !== undefined 
             ? expenseData.amount_paid_by_partner 
             : null,
+          payment_source_id: expenseData.payment_source_id || null,
         })
         .select()
         .single();
@@ -125,6 +280,9 @@ export function useExpenses(filters?: ExpenseFilters) {
 
       // Refresh expenses list
       await fetchExpenses();
+
+      // Sync credit card balances
+      await syncCreditCardBalances();
 
       return data;
     } catch (err) {
@@ -153,6 +311,7 @@ export function useExpenses(filters?: ExpenseFilters) {
         amount_paid_by_partner: expenseData.is_shared && expenseData.amount_paid_by_partner !== undefined 
           ? expenseData.amount_paid_by_partner 
           : null,
+        payment_source_id: expenseData.payment_source_id !== undefined ? expenseData.payment_source_id : null,
       };
 
       const { error: updateError } = await supabase
@@ -167,6 +326,9 @@ export function useExpenses(filters?: ExpenseFilters) {
 
       // Refresh expenses list
       await fetchExpenses();
+
+      // Sync credit card balances
+      await syncCreditCardBalances();
 
       return true;
     } catch (err) {
@@ -195,6 +357,9 @@ export function useExpenses(filters?: ExpenseFilters) {
 
       // Refresh expenses list
       await fetchExpenses();
+
+      // Sync credit card balances
+      await syncCreditCardBalances();
 
       return true;
     } catch (err) {

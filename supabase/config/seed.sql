@@ -160,3 +160,28 @@ INSERT INTO subcategories (category_id, name, icon, color)
 SELECT id, 'FD', '🏦', '#FFF0F5'
 FROM categories WHERE name = 'Investments' AND user_id IS NULL;
 
+-- Credit Card Repayment category
+INSERT INTO categories (name, icon, color, user_id)
+VALUES ('Credit Card Repayment', '💳', '#FF6B9D', NULL)
+ON CONFLICT (user_id, name) DO NOTHING;
+
+INSERT INTO subcategories (category_id, name, icon, color)
+SELECT id, 'Flipkart Axis Bank CC', '💳', '#FF7FA8'
+FROM categories WHERE name = 'Credit Card Repayment' AND user_id IS NULL
+ON CONFLICT (category_id, name) DO NOTHING;
+
+INSERT INTO subcategories (category_id, name, icon, color)
+SELECT id, 'Axis Bank Indian Oil CC', '💳', '#FF93B3'
+FROM categories WHERE name = 'Credit Card Repayment' AND user_id IS NULL
+ON CONFLICT (category_id, name) DO NOTHING;
+
+INSERT INTO subcategories (category_id, name, icon, color)
+SELECT id, 'Axis Bank Neo CC', '💳', '#FFA7BE'
+FROM categories WHERE name = 'Credit Card Repayment' AND user_id IS NULL
+ON CONFLICT (category_id, name) DO NOTHING;
+
+INSERT INTO subcategories (category_id, name, icon, color)
+SELECT id, 'Swiggy HDFC CC', '💳', '#FFBBC9'
+FROM categories WHERE name = 'Credit Card Repayment' AND user_id IS NULL
+ON CONFLICT (category_id, name) DO NOTHING;
+

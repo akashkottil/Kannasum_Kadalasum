@@ -17,7 +17,8 @@ import {
   X,
   Search,
   Bell,
-  User
+  User,
+  TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
@@ -52,6 +53,7 @@ export default function DashboardLayout({
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Expenses', href: '/expenses', icon: DollarSign },
+    { name: 'Investments', href: '/investments', icon: TrendingUp },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
