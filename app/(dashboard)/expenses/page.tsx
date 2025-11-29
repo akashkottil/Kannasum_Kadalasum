@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Expense } from '@/lib/types/expense';
+import { Expense, ExpenseFormData } from '@/lib/types/expense';
 import { ExpenseForm } from '@/components/expenses/ExpenseForm';
 import { ExpenseList } from '@/components/expenses/ExpenseList';
 import { useExpenses } from '@/lib/hooks/useExpenses';
@@ -22,7 +22,7 @@ export default function ExpensesPage() {
     setShowForm(true);
   };
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: ExpenseFormData) => {
     setFormLoading(true);
     
     try {

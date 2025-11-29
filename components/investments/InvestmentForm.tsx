@@ -47,7 +47,10 @@ export function InvestmentForm({ investment, onSubmit, onCancel, loading }: Inve
     await onSubmit(formData);
   };
 
-  const handleChange = (field: keyof InvestmentFormData, value: any) => {
+  const handleChange = <K extends keyof InvestmentFormData>(
+    field: K,
+    value: InvestmentFormData[K]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

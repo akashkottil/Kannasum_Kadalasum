@@ -46,13 +46,13 @@ export function PieChartComponent({ data, height = 300 }: PieChartProps) {
     <ResponsiveContainer width="100%" height={height}>
       <RechartsPieChart>
         <Pie
-          data={chartData as any}
+          data={chartData}
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={(props: any) => {
+          label={(props: { name?: string; percent?: number }) => {
             const { name, percent } = props;
-            return `${name}: ${((percent || 0) * 100).toFixed(0)}%`;
+            return `${name || ''}: ${((percent || 0) * 100).toFixed(0)}%`;
           }}
           outerRadius={80}
           fill="#8884d8"

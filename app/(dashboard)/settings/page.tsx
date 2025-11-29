@@ -102,19 +102,24 @@ export default function SettingsPage() {
       setInvitationLink(link);
       setInvitationSent(true);
       setInvitationEmail('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error sending invitation:', err);
       // Show more detailed error message
       let errorMessage = 'Failed to send invitation. Please try again.';
       
-      if (err?.code === '23505') {
-        errorMessage = 'An invitation with this token already exists. Please try again.';
-      } else if (err?.code === '42501') {
-        errorMessage = 'Permission denied. Please check your database permissions.';
-      } else if (err?.message) {
+      if (err && typeof err === 'object') {
+        const errorObj = err as { code?: string; message?: string; error?: { message?: string } };
+        if (errorObj.code === '23505') {
+          errorMessage = 'An invitation with this token already exists. Please try again.';
+        } else if (errorObj.code === '42501') {
+          errorMessage = 'Permission denied. Please check your database permissions.';
+        } else if (errorObj.message) {
+          errorMessage = errorObj.message;
+        } else if (errorObj.error?.message) {
+          errorMessage = errorObj.error.message;
+        }
+      } else if (err instanceof Error) {
         errorMessage = err.message;
-      } else if (err?.error?.message) {
-        errorMessage = err.error.message;
       }
       
       setError(errorMessage);

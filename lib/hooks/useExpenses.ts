@@ -301,7 +301,7 @@ export function useExpenses(filters?: ExpenseFilters) {
       // Set partner_id if expense is marked as shared and partner exists
       const partnerId = expenseData.is_shared && partner ? partner.id : null;
 
-      const updatePayload: any = {
+      const updatePayload: Partial<Expense> = {
         ...expenseData,
         partner_id: expenseData.is_shared ? partnerId : null,
         is_shared: expenseData.is_shared || false,

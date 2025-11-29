@@ -87,7 +87,10 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
     await onSubmit(formData);
   };
 
-  const handleChange = (field: keyof ExpenseFormData, value: any) => {
+  const handleChange = <K extends keyof ExpenseFormData>(
+    field: K,
+    value: ExpenseFormData[K]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
