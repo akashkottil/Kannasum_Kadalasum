@@ -69,7 +69,7 @@ export function ExpenseForm({ expense, onSubmit, onCancel, loading }: ExpenseFor
   );
 
   // Check if Credit Card Repayment category is selected
-  const isCreditCardRepaymentCategory = categories.find(
+  const isCreditCardRepaymentCategory = !!categories.find(
     cat => cat.id === formData.category_id && cat.name === 'Credit Card Repayment'
   );
 
