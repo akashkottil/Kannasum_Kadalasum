@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Copy, Check, X, Mail, UserPlus, RefreshCw } from 'lucide-react';
+import { CategoryList } from '@/components/categories/CategoryList';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -303,15 +304,16 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Categories placeholder */}
+      {/* Categories Management */}
       <Card>
         <CardHeader>
           <CardTitle>Categories</CardTitle>
+          <CardDescription>
+            Manage your expense categories and subcategories. Default categories cannot be edited or deleted.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            Category management coming soon
-          </div>
+          <CategoryList />
         </CardContent>
       </Card>
     </div>

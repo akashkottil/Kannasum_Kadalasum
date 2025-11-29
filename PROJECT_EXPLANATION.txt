@@ -1,0 +1,759 @@
+================================================================================
+                    EXPENSE TRACKER - COMPLETE PROJECT EXPLANATION
+================================================================================
+
+PROJECT OVERVIEW
+================================================================================
+
+The Expense Tracker is a collaborative web application designed for couples to 
+track, manage, and analyze their daily expenses together. It provides a modern, 
+user-friendly interface for recording expenses, categorizing spending, and 
+gaining insights through analytics.
+
+Key Purpose:
+- Enable couples to track shared and individual expenses
+- Provide real-time synchronization between partners
+- Offer visual analytics and insights
+- Support multiple payment sources including credit cards
+- Track investments alongside expenses
+- Manage expense categories and subcategories
+
+================================================================================
+TECHNOLOGY STACK
+================================================================================
+
+FRONTEND:
+---------
+- Next.js 16.0.1 (App Router architecture)
+- React 19.2.0
+- TypeScript 5
+- Tailwind CSS v4 (styling)
+- Lucide React (icons)
+- Recharts (charting library for analytics)
+- date-fns (date manipulation)
+
+BACKEND & DATABASE:
+-------------------
+- Supabase (PostgreSQL database)
+- Supabase Auth (authentication)
+- Supabase Real-time (for live updates)
+- Row Level Security (RLS) for data protection
+
+STATE MANAGEMENT:
+-----------------
+- React Context API (AuthContext, ThemeContext, PartnerContext)
+- Zustand (optional state management)
+- @tanstack/react-query (data fetching)
+
+UTILITIES:
+----------
+- class-variance-authority (component variants)
+- clsx & tailwind-merge (className utilities)
+
+================================================================================
+PROJECT ARCHITECTURE
+================================================================================
+
+APPLICATION STRUCTURE:
+---------------------
+The application follows Next.js 14+ App Router pattern with the following 
+structure:
+
+1. APP DIRECTORY (app/):
+   - Root layout with providers (Theme, Auth, Partner)
+   - Landing page for unauthenticated users
+   - Authentication routes: login, signup
+   - Protected dashboard routes: dashboard, expenses, analytics, investments, 
+     settings, credit-cards
+
+2. COMPONENTS DIRECTORY (components/):
+   - UI components (button, input, card, label, select)
+   - Feature components (expenses, investments, charts, categories)
+   - Shared components (ThemeToggle)
+
+3. CONTEXT DIRECTORY (context/):
+   - AuthContext: Manages user authentication state
+   - ThemeContext: Handles dark/light theme switching
+   - PartnerContext: Manages partner relationship state
+
+4. LIB DIRECTORY (lib/):
+   - hooks/: Custom React hooks for data fetching
+   - supabase/: Client configurations (browser, server, middleware)
+   - types/: TypeScript type definitions
+   - utils/: Utility functions (formatters, validations, calculations)
+
+5. SUPABASE DIRECTORY (supabase/):
+   - migrations/: SQL migration files for database schema
+   - config/: Seed data for default categories and payment sources
+
+AUTHENTICATION FLOW:
+--------------------
+1. User signs up or logs in via Supabase Auth
+2. Middleware checks authentication status on protected routes
+3. AuthContext provides user state throughout the app
+4. Protected routes redirect to login if not authenticated
+
+DATA FLOW:
+----------
+1. Custom hooks (useExpenses, useCategories, etc.) fetch data from Supabase
+2. Data is filtered and transformed client-side
+3. Components consume data through hooks
+4. Updates trigger refetch and real-time sync (when implemented)
+
+================================================================================
+DATABASE SCHEMA
+================================================================================
+
+The database consists of the following tables:
+
+1. USERS (auth.users - managed by Supabase):
+   - User accounts and authentication data
+   - Automatically created by Supabase Auth
+
+2. PARTNERS:
+   - Links two users in a partner relationship
+   - Fields: id, user1_id, user2_id, status (pending/active/blocked), 
+     initiated_by, timestamps
+   - Unique constraint on (user1_id, user2_id)
+
+3. CATEGORIES:
+   - Main expense categories (Food, Petrol, Loan, etc.)
+   - Fields: id, name, icon, color, user_id (null for default categories), 
+     timestamps
+   - Users can create custom categories
+
+4. SUBCATEGORIES:
+   - Subcategories within main categories
+   - Fields: id, category_id, name, icon, color, timestamps
+   - Example: Food -> Breakfast, Lunch, Dinner
+
+5. EXPENSES:
+   - Core expense records
+   - Fields: id, user_id, partner_id, amount, category_id, subcategory_id, 
+     date, time, notes, custom_icon, paid_by_user_id, is_shared, 
+     amount_paid_by_user, amount_paid_by_partner, payment_source_id, 
+     timestamps, deleted_at (soft delete)
+   - Supports shared expenses with split amounts
+
+6. PARTNER_INVITATIONS:
+   - Tracks partner linking invitations
+   - Fields: id, from_user_id, to_email, token, status, expires_at, 
+     created_at
+
+7. INVESTMENTS:
+   - Investment records (Mutual Funds, Stocks, etc.)
+   - Fields: id, user_id, partner_id, name, type, amount, date, notes, 
+     timestamps
+
+8. CREDIT_CARDS:
+   - Credit card information
+   - Fields: id, user_id, card_name, card_number (last 4 digits), 
+     current_balance, credit_limit, timestamps
+
+9. PAYMENT_SOURCES:
+   - Payment methods (Credit Cards, UPI, Cash, Bank Accounts)
+   - Fields: id, user_id, name, type, is_active, timestamps
+
+SECURITY:
+---------
+- Row Level Security (RLS) enabled on all tables
+- Users can only access their own data
+- Partners can access shared data
+- Invitations are token-based and time-limited
+
+INDEXES:
+--------
+- Indexes on frequently queried columns (user_id, date, category_id, etc.)
+- Composite indexes for common query patterns
+
+================================================================================
+FEATURES
+================================================================================
+
+COMPLETED FEATURES:
+-------------------
+
+1. Authentication System:
+   - User registration and login
+   - Session management
+   - Protected routes with middleware
+   - Sign out functionality
+
+2. Theme System:
+   - Dark/Light mode toggle
+   - System preference detection
+   - Theme persistence in localStorage
+   - Smooth theme transitions
+
+3. Navigation & Layout:
+   - Responsive sidebar navigation
+   - Mobile-friendly hamburger menu
+   - Dashboard layout with header
+   - User profile display
+
+4. Expense Management:
+   - Add, edit, delete expenses
+   - Category and subcategory selection
+   - Date and time tracking
+   - Notes and custom icons
+   - Payment source tracking
+   - Shared expense support with split amounts
+   - Soft delete (deleted_at timestamp)
+
+5. Category Management:
+   - Default categories pre-seeded
+   - Custom category creation
+   - Subcategory management
+   - Icon and color customization
+
+6. Investment Tracking:
+   - Add, edit, delete investments
+   - Multiple investment types
+   - Date tracking
+
+7. Credit Card Management:
+   - Track multiple credit cards
+   - Automatic balance calculation from expenses
+   - Credit limit tracking
+   - Repayment tracking via special category
+
+8. Payment Sources:
+   - Multiple payment methods
+   - Link expenses to payment sources
+   - Track spending by payment method
+
+9. Partner Linking:
+   - Invitation system
+   - Partner relationship management
+   - Shared data access
+
+10. Analytics (Basic):
+    - Expense statistics
+    - Category-wise breakdown
+    - Date range filtering
+
+11. Search & Filtering:
+    - Search expenses by category, subcategory, notes
+    - Filter by date range, category, user
+    - Sort by date, amount, category
+
+PARTIALLY IMPLEMENTED:
+----------------------
+
+1. Analytics Dashboard:
+   - Basic structure exists
+   - Charts need full implementation
+   - Advanced analytics pending
+
+2. Real-time Sync:
+   - Infrastructure in place
+   - Full real-time subscriptions pending
+
+FUTURE ENHANCEMENTS:
+--------------------
+- Budget goals per category
+- PDF export for reports
+- Push notifications
+- Receipt photo attachments
+- Multi-currency support
+- Recurring expenses
+- Advanced analytics and predictions
+
+================================================================================
+PROJECT STRUCTURE DETAILED
+================================================================================
+
+ROOT DIRECTORY:
+---------------
+- package.json: Dependencies and scripts
+- tsconfig.json: TypeScript configuration
+- next.config.ts: Next.js configuration
+- middleware.ts: Authentication middleware
+- tailwind.config: Tailwind CSS configuration
+- postcss.config.mjs: PostCSS configuration
+
+APP DIRECTORY STRUCTURE:
+-----------------------
+app/
+├── (auth)/                    # Authentication route group
+│   ├── layout.tsx            # Auth layout
+│   ├── login/
+│   │   └── page.tsx          # Login page
+│   └── signup/
+│       └── page.tsx          # Signup page
+│
+├── (dashboard)/               # Protected dashboard routes
+│   ├── layout.tsx            # Dashboard layout with sidebar
+│   ├── dashboard/
+│   │   └── page.tsx          # Main dashboard
+│   ├── expenses/
+│   │   └── page.tsx          # Expenses list page
+│   ├── analytics/
+│   │   └── page.tsx          # Analytics page
+│   ├── investments/
+│   │   └── page.tsx          # Investments page
+│   ├── credit-cards/
+│   │   └── page.tsx          # Credit cards page
+│   └── settings/
+│       └── page.tsx          # Settings page
+│
+├── layout.tsx                 # Root layout with providers
+├── page.tsx                   # Landing page
+└── globals.css                # Global styles
+
+COMPONENTS DIRECTORY:
+---------------------
+components/
+├── ui/                        # Base UI components
+│   ├── button.tsx            # Button component
+│   ├── input.tsx             # Input component
+│   ├── card.tsx              # Card component
+│   ├── label.tsx             # Label component
+│   └── select.tsx            # Select component
+│
+├── expenses/                 # Expense-related components
+│   ├── ExpenseCard.tsx       # Individual expense card
+│   ├── ExpenseForm.tsx       # Expense form
+│   └── ExpenseList.tsx       # Expense list
+│
+├── investments/              # Investment components
+│   ├── InvestmentCard.tsx
+│   ├── InvestmentForm.tsx
+│   └── InvestmentList.tsx
+│
+├── charts/                   # Chart components
+│   ├── BarChart.tsx
+│   ├── LineChart.tsx
+│   └── PieChart.tsx
+│
+├── categories/               # Category management
+├── credit-cards/             # Credit card components
+├── dashboard/                # Dashboard widgets
+└── shared/                   # Shared components
+    └── ThemeToggle.tsx       # Theme toggle button
+
+CONTEXT DIRECTORY:
+------------------
+context/
+├── AuthContext.tsx           # Authentication state management
+├── ThemeContext.tsx          # Theme state management
+└── PartnerContext.tsx        # Partner relationship state
+
+LIB DIRECTORY:
+--------------
+lib/
+├── hooks/                    # Custom React hooks
+│   ├── useExpenses.ts       # Expense data fetching and CRUD
+│   ├── useCategories.ts     # Category management
+│   ├── useInvestments.ts    # Investment management
+│   ├── useCreditCards.ts    # Credit card management
+│   ├── usePaymentSources.ts # Payment source management
+│   └── useAnalytics.ts      # Analytics data
+│
+├── supabase/                # Supabase client configurations
+│   ├── client.ts            # Browser client
+│   ├── server.ts            # Server-side client
+│   └── middleware.ts        # Middleware client
+│
+├── types/                    # TypeScript type definitions
+│   ├── index.ts             # Type exports
+│   ├── expense.ts           # Expense types
+│   ├── category.ts          # Category types
+│   ├── user.ts              # User types
+│   ├── analytics.ts         # Analytics types
+│   ├── investment.ts        # Investment types
+│   ├── credit-card.ts       # Credit card types
+│   └── payment-source.ts    # Payment source types
+│
+└── utils/                    # Utility functions
+    ├── cn.ts                # className utility
+    ├── formatters.ts        # Currency, date formatters
+    ├── validations.ts       # Form validations
+    └── calculations.ts      # Calculation utilities
+
+SUPABASE DIRECTORY:
+-------------------
+supabase/
+├── migrations/              # Database migration files
+│   ├── 001_initial_schema.sql          # Initial tables
+│   ├── 002_row_level_security.sql      # RLS policies
+│   ├── 003_add_paid_by_field.sql       # Paid by field
+│   ├── 004_add_is_shared_field.sql      # Shared expense field
+│   ├── 005_verify_partner_invitations.sql
+│   ├── 006_fix_partner_invitations_rls.sql
+│   ├── 007_allow_public_invitation_read.sql
+│   ├── 008_fix_partner_creation_issue.sql
+│   ├── 009_add_expense_split_fields.sql # Split amount fields
+│   ├── 010_add_investments.sql         # Investments table
+│   ├── 011_add_credit_cards.sql        # Credit cards table
+│   ├── 012_add_payment_sources.sql     # Payment sources table
+│   ├── 013_add_payment_source_to_expenses.sql
+│   ├── 014_add_credit_card_repayment_category.sql
+│   ├── 015_remove_duplicate_cc_repayment_category.sql
+│   ├── 016_fix_cc_repayment_category_cleanup.sql
+│   └── 017_remove_duplicate_cc_repayment_categories.sql
+│
+└── config/                  # Configuration and seed data
+    ├── seed.sql             # Default categories and subcategories
+    └── seed_payment_sources_and_investments.sql
+
+================================================================================
+KEY COMPONENTS EXPLAINED
+================================================================================
+
+AUTHENTICATION SYSTEM:
+----------------------
+- AuthContext: Provides user state, loading state, signOut function
+- Middleware: Protects routes, redirects unauthenticated users
+- Login/Signup pages: Form-based authentication using Supabase Auth
+- Session management: Automatic session refresh and persistence
+
+EXPENSE MANAGEMENT:
+-------------------
+- useExpenses hook: Main hook for expense operations
+  * Fetches expenses (user + partner if linked)
+  * Supports filtering, searching, sorting
+  * CRUD operations (add, update, delete)
+  * Automatic credit card balance sync
+  * Soft delete implementation
+
+- ExpenseForm: Form component for adding/editing expenses
+  * Category and subcategory selection
+  * Date and time pickers
+  * Payment source selection
+  * Shared expense toggle with split amounts
+  * Validation
+
+- ExpenseList: Displays list of expenses
+  * Filtering and sorting UI
+  * Expense cards with details
+  * Edit/delete actions
+
+CATEGORY SYSTEM:
+----------------
+- Default categories: 8 pre-seeded categories
+  * Food (5 subcategories)
+  * Petrol (3 subcategories)
+  * Loan (3 subcategories)
+  * Given to Friends (3 subcategories)
+  * Rent (3 subcategories)
+  * Shopping (5 subcategories)
+  * Recharge (4 subcategories)
+  * Investments (5 subcategories)
+  * Credit Card Repayment (special category)
+
+- Custom categories: Users can create their own
+- Subcategories: Each category can have multiple subcategories
+- Icons and colors: Visual identification
+
+PARTNER SYSTEM:
+---------------
+- PartnerContext: Manages partner relationship state
+- Partner linking: Invitation-based system
+- Shared data: Partners can see each other's expenses
+- Split expenses: Track who paid what amount
+
+CREDIT CARD SYSTEM:
+-------------------
+- Credit card tracking: Multiple cards per user
+- Balance calculation: Automatic from expenses
+  * Expenses using card increase balance
+  * Repayments decrease balance
+- Credit limit: Track spending limits
+- Repayment tracking: Via special category and subcategory
+
+PAYMENT SOURCES:
+----------------
+- Multiple payment methods: Credit Cards, UPI, Cash, Bank Accounts
+- Expense linking: Each expense can be linked to a payment source
+- Spending analysis: Track spending by payment method
+
+INVESTMENT TRACKING:
+--------------------
+- Investment records: Track various investment types
+- Similar structure to expenses: Date, amount, notes
+- Investment types: Mutual Funds, Stocks, Crypto, SIPs, FD
+
+ANALYTICS:
+----------
+- useAnalytics hook: Calculates statistics
+- Charts: Pie, Bar, Line charts (using Recharts)
+- Filters: Date range, category, user
+- Statistics: Total spending, category breakdown, trends
+
+================================================================================
+DATA FLOW & STATE MANAGEMENT
+================================================================================
+
+AUTHENTICATION FLOW:
+-------------------
+1. User logs in → Supabase Auth creates session
+2. AuthContext receives session → Updates user state
+3. Middleware checks session on route change
+4. Protected routes require valid session
+5. Sign out → Clears session and redirects
+
+EXPENSE DATA FLOW:
+------------------
+1. Component calls useExpenses hook
+2. Hook fetches from Supabase (with RLS filtering)
+3. Data filtered/sorted client-side
+4. Component receives expenses array
+5. User action (add/edit/delete) → Hook updates Supabase
+6. Hook refetches data → Component updates
+
+PARTNER DATA SHARING:
+---------------------
+1. Partner relationship established
+2. PartnerContext loads partner data
+3. useExpenses hook includes partner's user_id in query
+4. RLS policies allow access to partner's data
+5. Both users see shared expenses
+
+CREDIT CARD BALANCE SYNC:
+-------------------------
+1. Expense added/updated/deleted
+2. useExpenses hook calls syncCreditCardBalances
+3. Function fetches all expenses
+4. Calculates balance for each card:
+   - Expenses using card → increase balance
+   - Repayments for card → decrease balance
+5. Updates credit_cards table
+
+================================================================================
+SECURITY IMPLEMENTATION
+================================================================================
+
+ROW LEVEL SECURITY (RLS):
+--------------------------
+All tables have RLS policies that:
+- Allow users to read/write their own data
+- Allow partners to read shared data
+- Prevent unauthorized access
+- Support invitation system
+
+AUTHENTICATION:
+---------------
+- Supabase Auth handles password hashing
+- JWT tokens for session management
+- Secure cookie storage
+- Automatic token refresh
+
+MIDDLEWARE PROTECTION:
+----------------------
+- All dashboard routes protected
+- Unauthenticated users redirected to login
+- Session validation on every request
+
+INPUT VALIDATION:
+-----------------
+- Client-side validation in forms
+- Type checking with TypeScript
+- Database constraints (amount > 0, etc.)
+
+================================================================================
+SETUP & DEPLOYMENT
+================================================================================
+
+PREREQUISITES:
+--------------
+- Node.js 18+ and npm
+- Supabase account (free tier works)
+
+LOCAL SETUP:
+------------
+1. Clone repository
+2. Install dependencies: npm install
+3. Create Supabase project
+4. Get project URL and anon key
+5. Create .env.local:
+   NEXT_PUBLIC_SUPABASE_URL=your_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+6. Run migrations in Supabase SQL editor:
+   - 001_initial_schema.sql
+   - 002_row_level_security.sql
+   - All other migrations in order
+7. Run seed data: seed.sql
+8. Start dev server: npm run dev
+
+DEPLOYMENT:
+-----------
+- Optimized for Vercel deployment
+- Environment variables required
+- Database migrations run manually in Supabase
+- See VERCEL_DEPLOYMENT.md for details
+
+================================================================================
+DEVELOPMENT WORKFLOW
+================================================================================
+
+SCRIPTS:
+--------
+- npm run dev: Start development server
+- npm run build: Build for production
+- npm run start: Start production server
+- npm run lint: Run ESLint
+
+CODE ORGANIZATION:
+------------------
+- TypeScript for type safety
+- Component-based architecture
+- Custom hooks for data logic
+- Utility functions for reusable logic
+- Context for global state
+
+BEST PRACTICES:
+---------------
+- Server components by default
+- Client components only when needed ('use client')
+- Type-safe database queries
+- Error handling in all async operations
+- Loading states for better UX
+- Responsive design (mobile-first)
+
+================================================================================
+CURRENT IMPLEMENTATION STATUS
+================================================================================
+
+COMPLETED (100%):
+-----------------
+✓ Project setup and configuration
+✓ Authentication system
+✓ Theme system
+✓ Database schema and migrations
+✓ RLS policies
+✓ Navigation and layouts
+✓ Expense CRUD operations
+✓ Category management
+✓ Investment tracking
+✓ Credit card management
+✓ Payment sources
+✓ Partner linking infrastructure
+✓ Basic analytics
+✓ Search and filtering
+✓ TypeScript types
+✓ Utility functions
+
+PARTIALLY COMPLETE:
+-------------------
+~ Analytics dashboard (structure exists, needs enhancement)
+~ Real-time sync (infrastructure ready, subscriptions pending)
+
+TODO:
+-----
+- Advanced analytics charts
+- Real-time subscriptions
+- Budget goals
+- PDF export
+- Push notifications
+- Receipt attachments
+- Multi-currency
+- Recurring expenses
+
+================================================================================
+TECHNICAL DETAILS
+================================================================================
+
+NEXT.JS APP ROUTER:
+-------------------
+- Uses App Router (not Pages Router)
+- Route groups: (auth), (dashboard)
+- Server and client components
+- Layout nesting
+- Metadata API
+
+SUPABASE INTEGRATION:
+---------------------
+- @supabase/ssr for server-side rendering
+- @supabase/supabase-js for client-side
+- Separate clients for browser, server, middleware
+- Real-time subscriptions (ready for implementation)
+
+STYLING:
+--------
+- Tailwind CSS v4
+- Custom utility classes
+- Dark mode via class-based switching
+- Responsive breakpoints
+- Custom component variants
+
+TYPE SAFETY:
+------------
+- Full TypeScript coverage
+- Database types inferred
+- Form validation types
+- API response types
+
+PERFORMANCE:
+------------
+- Client-side filtering/sorting
+- Indexed database queries
+- Optimized re-renders
+- Lazy loading ready
+
+================================================================================
+FILE COUNT & STATISTICS
+================================================================================
+
+Approximate Statistics:
+- TypeScript/TSX files: 50+
+- SQL migration files: 17
+- Configuration files: 10+
+- Documentation files: 5
+- Total lines of code: ~5,000+
+
+================================================================================
+LEARNING RESOURCES
+================================================================================
+
+This codebase demonstrates:
+- Next.js 14+ App Router patterns
+- Supabase integration
+- TypeScript best practices
+- Database design with RLS
+- React Context patterns
+- Custom hooks
+- Tailwind CSS usage
+- Component composition
+- Form handling
+- State management
+
+================================================================================
+SUPPORT & DOCUMENTATION
+================================================================================
+
+Documentation Files:
+- README.md: Project overview and quick start
+- SETUP_GUIDE.md: Detailed setup instructions
+- IMPLEMENTATION_STATUS.md: Feature tracking
+- PROJECT_SUMMARY.md: High-level summary
+- VERCEL_DEPLOYMENT.md: Deployment guide
+- SUPABASE_EMAIL_CONFIG.md: Email configuration
+
+================================================================================
+CONCLUSION
+================================================================================
+
+This Expense Tracker is a production-ready foundation for a collaborative 
+expense tracking application. It includes:
+
+✓ Complete authentication system
+✓ Full expense management
+✓ Partner collaboration
+✓ Credit card tracking
+✓ Investment tracking
+✓ Payment source management
+✓ Category system
+✓ Basic analytics
+✓ Modern, responsive UI
+✓ Dark mode support
+✓ Secure database with RLS
+✓ Type-safe codebase
+
+The application is ready for use and can be extended with additional features 
+as needed. The architecture is scalable and follows modern best practices.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+

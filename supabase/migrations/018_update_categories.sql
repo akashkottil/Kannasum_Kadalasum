@@ -1,5 +1,5 @@
--- Seed default categories and subcategories
--- This file can be run multiple times safely using ON CONFLICT DO NOTHING
+-- Migration: Add comprehensive categories and subcategories
+-- This migration preserves all existing data and adds new categories
 
 -- 1. Housing & Home
 INSERT INTO categories (name, icon, color, user_id)
@@ -432,6 +432,7 @@ FROM categories WHERE name = 'Investments & Savings' AND user_id IS NULL
 ON CONFLICT (category_id, name) DO NOTHING;
 
 -- 12. Credit Card Repayment (SYSTEM CATEGORY)
+-- Note: This category may already exist, so we use ON CONFLICT
 INSERT INTO categories (name, icon, color, user_id)
 VALUES ('Credit Card Repayment', '💳', '#9B59B6', NULL)
 ON CONFLICT (user_id, name) DO NOTHING;
@@ -540,3 +541,4 @@ INSERT INTO subcategories (category_id, name, icon, color)
 SELECT id, 'Unknown / Uncategorized', '❓', '#D5E5E6'
 FROM categories WHERE name = 'Miscellaneous' AND user_id IS NULL
 ON CONFLICT (category_id, name) DO NOTHING;
+
