@@ -292,11 +292,17 @@ export default function AnalyticsPage() {
                 </div>
               ) : (
                 <PieChartComponent 
-                  data={spendingSummary.total_spend_by_payment_source.map(item => ({
-                    name: item.payment_source_name,
-                    value: item.amount,
-                    icon: item.icon || '💰',
-                  }))} 
+                  data={spendingSummary.total_spend_by_payment_source.map((item, index) => {
+                    const COLORS = ['#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#EF4444', '#14B8A6', '#F97316', '#6366F1'];
+                    return {
+                      category_id: item.payment_source_id,
+                      category_name: item.payment_source_name,
+                      amount: item.amount,
+                      percentage: item.percentage,
+                      icon: item.icon || '💰',
+                      color: COLORS[index % COLORS.length],
+                    };
+                  })} 
                   height={300} 
                 />
               )}
